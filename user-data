@@ -1,0 +1,20 @@
+#cloud-config
+autoinstall:
+  version: 1
+  identity:
+    hostname: ubuntu
+    password: "$6$exDY1mhS4KUYCE/2$zmn9ToZwTKLhCw.b4/b.ZRTIZM30JZ4QrOQ2aOXJ8yk96xpcCof0kxKwuX1kqLG/ygbJ1f8wxED22bTL4F46P0"
+    username: ubuntu
+  locale: en_GB
+  keyboard:
+    layout: gb
+    variant: uk
+  ssh:
+    # install openssh-server
+    install-server: true
+    # add each entry to ~/.ssh/authorized_keys for the configured user or the
+    # first user defined in the user definition directive.
+    #authorized-keys:
+    #  - ssh-key-here
+    # disable password authentication
+    #allow-pw: false
