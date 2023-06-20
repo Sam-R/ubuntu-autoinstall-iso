@@ -11,11 +11,18 @@
 # https://gist.github.com/s3rj1k/55b10cd20f31542046018fcce32f103e
 ###########################################################
 
+# Define the release we want to use.
+# Note that the release must support cloudbuild to work
+# Ubuntu 20.04 LTS = focal
+# Ubuntu 22.04 LTS = jammy
+RELEASE=jammy
+
 # Define the iso image we're going to use
 # This has to match the download URL
-FILE=focal-live-server-amd64.iso
+FILE="$RELEASE-live-server-amd64.iso"
 SHA_FILE=SHA256SUMS
-DOWNLOAD_URI=https://cdimage.ubuntu.com/ubuntu-server/focal/daily-live/current/
+DOWNLOAD_URI="https://cdimage.ubuntu.com/ubuntu-server/$RELEASE/daily-live/current/"
+DOWNLOAD_URI="https://cdimage.ubuntu.com/ubuntu-server/jammy/daily-live/current/"
 
 
 ###########################################################
@@ -108,7 +115,7 @@ function createDataFile {
 ###########################################################
 function setBootOptions {
     sed -i 's|---|autoinstall ds=nocloud\\\;s=/cdrom/nocloud/ ---|g' iso/boot/grub/grub.cfg
-    sed -i 's|---|autoinstall ds=nocloud;s=/cdrom/nocloud/ ---|g' iso/isolinux/txt.cfg
+    sed -i 's/timeout=30/timeout=1/g' iso/boot/grub/grub.cfg
 }
 
 ###########################################################
@@ -141,25 +148,40 @@ xorriso -osirrox on -indev "$FILE" -extract / iso && chmod -R +w iso
 createDataFile "meta-data"
 createDataFile "user-data"
 
+# Extract ISO contents
+7z -y x "$FILE" -oiso || fail "can't extract iso"
+
+# Move boot files
+mv iso/\[BOOT\] ./BOOT || fail "can't move boot files"
+
 setBootOptions
 
 generateMD5
 
-dd if="$FILE" bs=512 count=1 of=isohdpfx.bin || fail "Can't extract required isohdpfx.bin file"
+cd iso || fail "can't cd to iso dir"
 
 # Create Install ISO from extracted dir (Ubuntu):
 xorriso -as mkisofs -r \
-  -V "ubuntu" \
-  -o autoinstall-"$FILE" \
-  -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot \
-  -boot-load-size 4 -boot-info-table \
-  -eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot \
-  -isohybrid-gpt-basdat -isohybrid-apm-hfsplus \
-  -isohybrid-mbr isohdpfx.bin  \
-  iso/boot iso
+  -V 'Ubuntu 22.04 LTS' \
+  -o ../ubuntu-22.04-autoinstall.iso \
+  --grub2-mbr ../BOOT/1-Boot-NoEmul.img \
+  -partition_offset 16 \
+  --mbr-force-bootable \
+  -append_partition 2 28732ac11ff8d211ba4b00a0c93ec93b ../BOOT/2-Boot-NoEmul.img \
+  -appended_part_as_gpt \
+  -iso_mbr_part_type a2a0d0ebe5b9334487c068b6b72699c7 \
+  -c '/boot.catalog' \
+  -b '/boot/grub/i386-pc/eltorito.img' \
+    -no-emul-boot -boot-load-size 4 -boot-info-table --grub2-boot-info \
+  -eltorito-alt-boot \
+  -e '--interval:appended_partition_2:::' \
+  -no-emul-boot \
+  .
 
 if [ $? -eq 0 ]; then
-    rm -Rf iso
+    cd .. || fail "error on cleanup"
+    rm -Rf iso || fail "error on cleanup"
+    rm -Rf BOOT || fail "error on cleanup"
 fi
 
 exit 0

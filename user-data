@@ -8,7 +8,6 @@ autoinstall:
   locale: en_GB
   keyboard:
     layout: gb
-    variant: uk
   ssh:
     # install openssh-server
     install-server: true
