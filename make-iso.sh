@@ -55,9 +55,9 @@ function fail {
 ###########################################################
 function checkPrerequisites {
     packages=("sha256sum" "wget" "7z" "xorriso" "dd" "md5sum")
-    for package in ${packages[@]};
+    for package in "${packages[@]}";
     do
-        which $package > /dev/null || fail "Missing required package $package"
+        command -v "$package" > /dev/null || fail "Missing required package $package"
     done
 }
 
@@ -67,7 +67,7 @@ function checkPrerequisites {
 function downloadIso {
     files=("$FILE" "$SHA_FILE" "$SHA_FILE.gpg")
 
-    for file in ${files[@]};
+    for file in "${files[@]}";
     do
         if [ -f "$file" ]; then
             echo "$file exists, using downloaded version"
@@ -88,7 +88,7 @@ function validateIsoChecksum {
 # Create data files for custom install
 ###########################################################
 function createDataFile {
-    if [ ! -n "$1" ]; then
+    if [ -z "$1" ]; then
         fail "Missing user or meta data file"
     fi
 
@@ -124,7 +124,7 @@ function generateMD5 {
         '!' -path "./isolinux/*" \
         -follow \
         -type f \
-        -exec "$(which md5sum)" {} \; > md5sum.txt) || fail "can't generate md5 sum"
+        -exec "$(command -v md5sum)" {} \; > md5sum.txt) || fail "can't generate md5 sum"
 
     mv ubuntu iso
 }
